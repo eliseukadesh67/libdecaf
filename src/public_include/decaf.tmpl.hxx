@@ -12,6 +12,7 @@ namespace decaf {
 $("\n".join([
 "        Run<%s>::run();" % cd["cxx_ns"]
 for cd in sorted(curve.values(), key=lambda x:x["c_ns"])
+if cd.get("run_for_all_curves", True)
 ])
 )
     }

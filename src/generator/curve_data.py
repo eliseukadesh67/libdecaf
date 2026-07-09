@@ -102,7 +102,13 @@ curve_data = {
         "window_bits":5,
 
         "eddsa_hash": "shake256",
-        "eddsa_dom":"SigEd521"
+        "eddsa_dom":"SigEd521",
+
+        # E-521 provides EdDSA only; the full Decaf/Ristretto point-compression
+        # surface (elligator, hash-to-curve) is not implemented for this field.
+        # Exclude it from the generic run_for_all_curves() loop used by the
+        # Decaf/Ristretto test and benchmark harnesses.
+        "run_for_all_curves": False
     }
 }
 

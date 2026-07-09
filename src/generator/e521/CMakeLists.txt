@@ -61,12 +61,28 @@ add_custom_command(
     COMMENT "Generating code for e521/decaf_gen_tables.c"
 )
 
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=decaf/point_521.hxx -o ${GSOURCE_PATH}/include/decaf/point_521.hxx ${PROJECT_SOURCE_DIR}/src/per_curve/point.tmpl.hxx
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/point.tmpl.hxx
+    OUTPUT ${GSOURCE_PATH}/include/decaf/point_521.hxx
+    COMMENT "Generating code for include/decaf/point_521.hxx"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=decaf/ed521.hxx -o ${GSOURCE_PATH}/include/decaf/ed521.hxx ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.hxx
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.hxx
+    OUTPUT ${GSOURCE_PATH}/include/decaf/ed521.hxx
+    COMMENT "Generating code for include/decaf/ed521.hxx"
+)
+
 add_custom_target(generatorE521 DEPENDS
 			generatorP521
        			${GSOURCE_PATH}/c/e521/scalar.c
        			${GSOURCE_PATH}/c/e521/decaf.c
        			${GSOURCE_PATH}/c/e521/elligator.c
        			${GSOURCE_PATH}/c/e521/eddsa.c
+			${GSOURCE_PATH}/include/decaf/point_521.hxx
+			${GSOURCE_PATH}/include/decaf/ed521.hxx
 			)
 include_directories(
 	${PROJECT_SOURCE_DIR}/src/p521
