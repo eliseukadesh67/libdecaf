@@ -1,0 +1,87 @@
+############################################################################
+# CMakeLists.txt
+#
+#    Released under the MIT License.  See LICENSE.txt for license information.
+#
+############################################################################
+# p521 field
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=field --guard=p521/f_field.h --item=p521 -o ${GSOURCE_PATH}/c/p521/f_field.h ${PROJECT_SOURCE_DIR}/src/per_field/f_field.tmpl.h
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_field/f_field.tmpl.h
+    OUTPUT ${GSOURCE_PATH}/c/p521/f_field.h
+    COMMENT "Generating code for p521/f_field.h"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=field --guard=p521/f_generic.c --item=p521 -o ${GSOURCE_PATH}/c/p521/f_generic.c ${PROJECT_SOURCE_DIR}/src/per_field/f_generic.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_field/f_generic.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/p521/f_generic.c
+    COMMENT "Generating code for p521/f_generic.c"
+)
+
+add_custom_target(generatorP521 DEPENDS
+	generatorCommonCode
+	${GSOURCE_PATH}/c/p521/f_field.h
+	${GSOURCE_PATH}/c/p521/f_generic.c
+	)
+
+# e521
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=e521/scalar.c -o ${GSOURCE_PATH}/c/e521/scalar.c ${PROJECT_SOURCE_DIR}/src/per_curve/scalar.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/scalar.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/e521/scalar.c
+    COMMENT "Generating code for e521/scalar.c"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=e521/decaf.c -o ${GSOURCE_PATH}/c/e521/decaf.c ${PROJECT_SOURCE_DIR}/src/per_curve/decaf.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/decaf.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/e521/decaf.c
+    COMMENT "Generating code for e521/decaf.c"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=e521/elligator.c -o ${GSOURCE_PATH}/c/e521/elligator.c ${PROJECT_SOURCE_DIR}/src/per_curve/elligator.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/elligator.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/e521/elligator.c
+    COMMENT "Generating code for e521/elligator.c"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=e521/eddsa.c -o ${GSOURCE_PATH}/c/e521/eddsa.c ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/e521/eddsa.c
+    COMMENT "Generating code for e521/eddsa.c"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=e521/decaf_gen_tables.c -o ${GSOURCE_PATH}/c/e521/decaf_gen_tables.c ${PROJECT_SOURCE_DIR}/src/per_curve/decaf_gen_tables.tmpl.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/decaf_gen_tables.tmpl.c
+    OUTPUT ${GSOURCE_PATH}/c/e521/decaf_gen_tables.c
+    COMMENT "Generating code for e521/decaf_gen_tables.c"
+)
+
+add_custom_target(generatorE521 DEPENDS
+			generatorP521
+       			${GSOURCE_PATH}/c/e521/scalar.c
+       			${GSOURCE_PATH}/c/e521/decaf.c
+       			${GSOURCE_PATH}/c/e521/elligator.c
+       			${GSOURCE_PATH}/c/e521/eddsa.c
+			)
+include_directories(
+	${PROJECT_SOURCE_DIR}/src/p521
+	${GSOURCE_PATH}/c/p521
+	${PROJECT_SOURCE_DIR}/src/p521/${TARGET_ARCH_DIR_P521}
+)
+
+add_executable(decaf_gen_tables_e521 EXCLUDE_FROM_ALL ${GSOURCE_PATH}/c/e521/decaf_gen_tables.c
+       			${GSOURCE_PATH}/c/e521/decaf.c
+			${GSOURCE_PATH}/c/e521/scalar.c
+			${PROJECT_SOURCE_DIR}/src/utils.c
+			$<TARGET_OBJECTS:p521>)
+
+add_custom_target(decaf_tables_e521
+	COMMAND decaf_gen_tables_e521 > ${PROJECT_SOURCE_DIR}/src/e521/decaf_tables.c
+	DEPENDS decaf_gen_tables_e521
+	COMMENT "Generating code for e521/decaf_tables.c"
+)

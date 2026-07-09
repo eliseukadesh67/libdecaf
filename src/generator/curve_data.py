@@ -18,6 +18,13 @@ field_data = {
         "gf_impl_bits" : 512,
         "gf_lit_limb_bits" : 56,
         "elligator_onto" : 0
+    },
+    "p521" : {
+        "gf_desc" : "2^521 - 1",
+        "gf_shortname" : "521",
+        "gf_impl_bits" : 576,
+        "gf_lit_limb_bits" : 58,
+        "elligator_onto" : 0
     }
 }
 
@@ -61,8 +68,41 @@ curve_data = {
         "combs":comb_config(5,5,18),
         "wnaf":wnaf_config(5,3),
         "window_bits":5,
-        
+
         "eddsa_dom":"SigEd448"
+    },
+    "e521" : {
+        # Edwards curve E-521:  a*x^2 + y^2 = 1 + d*x^2*y^2  over  p = 2^521 - 1,
+        # with a = 1, d = -376014, cofactor h = 4.  (source: neuromancer.sk / Aranha et al.)
+        "eddsa_encode_ratio": 4,
+        "x_encode_ratio": 4,
+        "altname": None,
+        "name" : "Ed521",
+        "cofactor" : 4,
+        "field" : "p521",
+        "scalar_bits" : 519,
+        "d": -376014,
+        # trace t = p + 1 - #E chosen so that the prime subgroup order
+        #   q = (p + 1 - t) / h  equals the canonical E-521 group order
+        #   L = 2^519 - 337554763258501705789107630418782636071904961214051226618635150085779108655765
+        "trace": 0xba924e6e2e40de823251d428604eb03ec109ceea595c382eafc576f282b9fca54,
+        # Montgomery u-coordinate of the Edwards base point (Gx, y=12): u = (1+y)/(1-y).
+        # Only used by the (out-of-scope) X-DH base constant; EdDSA does not use it.
+        "mont_base": 0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d173,
+        # Decaf 65-byte base encoding.  NOTE: only consumed by the table generator,
+        # which for p521 is overridden (Option B) to build the base via the 66-byte
+        # EdDSA decode path, since the Decaf 65-byte encode/decode is unfinished
+        # upstream for the p521 high-bit case.  Value kept for completeness.
+        "rist_base": "ba2cf50cea8a634d487d8ba3f0108068cd254dab3cde33cb878b9f5b8c7b460964d5e919f671f13f702d9a156d95777025f35ee3836e8944af90bfd10449ea484e",
+
+        # The fixed-base comb must cover the full 519-bit scalar: n*t*s = 5*5*21 = 525 >= 519.
+        # (Ed448 uses 5*5*18 = 450 for its 446-bit scalar; reusing that truncates E-521 scalars.)
+        "combs":comb_config(5,5,21),
+        "wnaf":wnaf_config(5,3),
+        "window_bits":5,
+
+        "eddsa_hash": "shake256",
+        "eddsa_dom":"SigEd521"
     }
 }
 

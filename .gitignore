@@ -48,3 +48,19 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# --- E-521 work: build trees, bytecode, scratch binaries ---
+build/
+build-*/
+__pycache__/
+*.pyc
+/test_ed521
+/test_penido
+/meu_teste
+/ed255_demo
+/gen_e521_base
+# Root-level scratch copies (canonical versions live in test/)
+/test_ed521.c
+/test_penido.c
+/penido_vectors.h
+/e521_ref.py

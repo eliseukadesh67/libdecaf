@@ -128,6 +128,20 @@ add_custom_command(
     COMMENT "Generating code for decaf/ed448.h"
 )
 
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=decaf/point_521.h -o ${GSOURCE_PATH}/include/decaf/point_521.h ${PROJECT_SOURCE_DIR}/src/per_curve/point.tmpl.h
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/point.tmpl.h
+    OUTPUT ${GSOURCE_PATH}/include/decaf/point_521.h
+    COMMENT "Generating code for decaf/point_521.h"
+)
+
+add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/generator/template.py --per=curve --item=e521 --guard=decaf/ed521.h -o ${GSOURCE_PATH}/include/decaf/ed521.h ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.h
+    DEPENDS ${PROJECT_SOURCE_DIR}/src/generator/template.py ${PROJECT_SOURCE_DIR}/src/per_curve/eddsa.tmpl.h
+    OUTPUT ${GSOURCE_PATH}/include/decaf/ed521.h
+    COMMENT "Generating code for decaf/ed521.h"
+)
+
 
 
 add_custom_target(generatorCommonCode DEPENDS
@@ -146,20 +160,24 @@ add_custom_target(generatorCommonCode DEPENDS
 	#these files shall be part of curve25519 and ed448goldilocks targets but they are included through decaf.h in common *.c
 	${GSOURCE_PATH}/include/decaf/point_255.h
 	${GSOURCE_PATH}/include/decaf/point_448.h
+	${GSOURCE_PATH}/include/decaf/point_521.h
 	${GSOURCE_PATH}/include/decaf/ed255.h
 	${GSOURCE_PATH}/include/decaf/ed448.h
+	${GSOURCE_PATH}/include/decaf/ed521.h
 	)
 
 add_subdirectory(curve25519)
 add_subdirectory(ed448goldilocks)
+add_subdirectory(e521)
 
 add_custom_target(decaf_tables DEPENDS
 	decaf_tables_curve25519
 	decaf_tables_ed448goldilocks
 	)
 
-add_custom_target(generatedCode DEPENDS 
+add_custom_target(generatedCode DEPENDS
 	generatorCommonCode
 	generatorEd448goldilocks
 	generatorCurve25519
+	generatorE521
 	)

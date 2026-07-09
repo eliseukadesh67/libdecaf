@@ -16,6 +16,10 @@ option(ENABLE_SHARED "Build shared library." ON)
 option(ENABLE_STATIC "Build static library." ON)
 option(ENABLE_STRICT "Build with strict compile options." YES)
 option(ENABLE_TESTS  "Enable compilation of tests." YES)
+# Experimental EdDSA support for the E-521 curve (field p = 2^521-1).
+# In this fork the E-521 field/curve targets are wired into the library by
+# default; the flag is kept so the documented configure command works.
+option(ENABLE_EXPERIMENTAL_E521 "Build the experimental EdDSA E-521 support." ON)
 option(GENERATED_SOURCE_PATH "Where the generated source code is stored, default in the building tree" OFF)
 
 if (GENERATED_SOURCE_PATH)

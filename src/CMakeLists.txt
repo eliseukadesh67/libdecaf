@@ -31,17 +31,22 @@ set(TARGET_ARCH_DIR_P25519 arch_32)
 # specific to p448, to get f_impl.c/h in p448
 # availables: arch_32, arch_arm_32, arch_neon, arch_ref64, arch_x86_64
 set(TARGET_ARCH_DIR_P448 arch_32)
+# specific to p521 (E-521 field 2^521-1); only 64-bit backends exist (ref64/x86_64).
+# availables: arch_ref64, arch_x86_64  (arch_32 is a scaffold stub)
+set(TARGET_ARCH_DIR_P521 arch_ref64)
 
 if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64") # x86_64
 	message("Target architecture is x86_64")
 	set(TARGET_ARCH_DIR arch_x86_64)
 	set(TARGET_ARCH_DIR_P25519 arch_x86_64)
 	set(TARGET_ARCH_DIR_P448 arch_x86_64)
+	set(TARGET_ARCH_DIR_P521 arch_x86_64)
 elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arch64") # shall be arm64 bits, stick to ref64
 	message("Target architecture is 64 bits general purpose(arm64 shall use this)")
 	set(TARGET_ARCH_DIR arch_ref64)
 	set(TARGET_ARCH_DIR_P25519 arch_ref64)
 	set(TARGET_ARCH_DIR_P448 arch_ref64)
+	set(TARGET_ARCH_DIR_P521 arch_ref64)
 elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") # is an arm 32 bits
 	if (NOT ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "armeabi") # arm <= 5.0 does not support instructions from the lib, keep arch_32
 		if(${ANDROID_ARM_NEON})
@@ -72,18 +77,20 @@ add_subdirectory(curve25519)
 add_subdirectory(ed448goldilocks)
 add_subdirectory(p25519)
 add_subdirectory(p448)
+add_subdirectory(p521)
+add_subdirectory(e521)
 
 add_subdirectory(generator)
 
 if(ENABLE_STATIC)
-	add_library(decaf-static STATIC ${DECAF_HEADER_FILES} ${DECAF_SOURCE_FILES_C} ${DECAF_SOURCE_FILES_CXX} $<TARGET_OBJECTS:p25519> $<TARGET_OBJECTS:p448> $<TARGET_OBJECTS:CURVE25519> $<TARGET_OBJECTS:CURVE448>)
+	add_library(decaf-static STATIC ${DECAF_HEADER_FILES} ${DECAF_SOURCE_FILES_C} ${DECAF_SOURCE_FILES_CXX} $<TARGET_OBJECTS:p25519> $<TARGET_OBJECTS:p448> $<TARGET_OBJECTS:p521> $<TARGET_OBJECTS:CURVE25519> $<TARGET_OBJECTS:CURVE448> $<TARGET_OBJECTS:CURVE521>)
 	add_dependencies(decaf-static generatedCode)
 	set_target_properties(decaf-static PROPERTIES OUTPUT_NAME decaf)
 	target_include_directories(decaf-static PUBLIC)
 	target_link_libraries(decaf-static INTERFACE)
 endif()
 if(ENABLE_SHARED)
-	add_library(decaf SHARED ${DECAF_HEADER_FILES} ${DECAF_SOURCE_FILES_C} ${DECAF_SOURCE_FILES_CXX} $<TARGET_OBJECTS:p25519> $<TARGET_OBJECTS:p448> $<TARGET_OBJECTS:CURVE25519> $<TARGET_OBJECTS:CURVE448>)
+	add_library(decaf SHARED ${DECAF_HEADER_FILES} ${DECAF_SOURCE_FILES_C} ${DECAF_SOURCE_FILES_CXX} $<TARGET_OBJECTS:p25519> $<TARGET_OBJECTS:p448> $<TARGET_OBJECTS:p521> $<TARGET_OBJECTS:CURVE25519> $<TARGET_OBJECTS:CURVE448> $<TARGET_OBJECTS:CURVE521>)
 	add_dependencies(decaf generatedCode)
 	if(APPLE)
 		set_target_properties(decaf PROPERTIES LINK_FLAGS "-stdlib=libc++")

@@ -3,15 +3,25 @@
 #define _XOPEN_SOURCE 600 /* for posix_memalign */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "field.h"
 #include "f_field.h"
 #include "decaf.h"
 
 #define API_NS(_id) $(c_ns)_##_id
+#if $(gf_bits) == 8*SER_BYTES + 1
+/* p521 (Option B): the Decaf 65-byte point encode/decode is unfinished upstream
+ * for the high-bit case of the p521 field (521 == 8*SER_BYTES + 1), so the base
+ * point cannot be recovered from the stored rist_base encoding.  Instead we
+ * rebuild it from the standard EdDSA generator B = (Gx, y = 12) through the
+ * complete 66-byte EdDSA decode path, then divide out the cofactor. */
+#include <decaf/ed521.h>
+#else
 static const unsigned char base_point_ser_for_pregen[SER_BYTES] = {
     $(ser(rist_base_decoded,8))
 };
+#endif
 
  /* To satisfy linker. */
 const gf API_NS(precomputed_base_as_fe)[1];
@@ -51,12 +61,33 @@ int main(int argc, char **argv) {
     (void)argc; (void)argv;
     
     API_NS(point_t) real_point_base;
-    int ret = API_NS(point_decode)(real_point_base,base_point_ser_for_pregen,0);
+    int ret;
+#if $(gf_bits) == 8*SER_BYTES + 1
+    /* Option B: real_point_base = decode_like_eddsa_and_mul_by_ratio(B_enc),
+     * where B_enc is the EdDSA encoding of the generator B = (Gx, y = 12):
+     * y little-endian in 66 bytes, sign bit of x in 0x80 of the last byte
+     * (Gx is even -> no sign bit).  Key derivation already divides the secret
+     * scalar by the encode ratio before scalar-multiplying this base and then
+     * multiplies by the ratio again while encoding, so the stored base must be
+     * the decoded point itself (verified: mul_by_ratio_and_encode([1/4]*P)
+     * reproduces the generator encoding, matching ECPy point arithmetic). */
+    {
+        uint8_t B_enc[DECAF_EDDSA_521_PUBLIC_BYTES];
+        memset(B_enc, 0, sizeof(B_enc));
+        B_enc[0] = 0x0c; /* y = 12 */
+        if (API_NS(point_decode_like_eddsa_and_mul_by_ratio)(real_point_base, B_enc) != DECAF_SUCCESS) {
+            fprintf(stderr, "Can't decode base point (eddsa path)!\n");
+            return 1;
+        }
+    }
+#else
+    ret = API_NS(point_decode)(real_point_base,base_point_ser_for_pregen,0);
     if (ret != DECAF_SUCCESS) {
         fprintf(stderr, "Can't decode base point!\n");
         return 1;
     }
-    
+#endif
+
     API_NS(precomputed_s) *pre;
     ret = posix_memalign((void**)&pre, API_NS(alignof_precomputed_s), API_NS(sizeof_precomputed_s));
     if (ret || !pre) {
