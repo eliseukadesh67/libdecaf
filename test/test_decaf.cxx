@@ -327,7 +327,7 @@ static void test_ec() {
         Point f((FixedBlock<sizeof(enc)>(enc)));
         test.fail();
         printf("    Allowed deserialize of [1]: %d", f==id);
-    } catch (CryptoException) {
+    } catch (const CryptoException&) {
         /* ok */
     }
     
@@ -336,7 +336,7 @@ static void test_ec() {
             Point f(sqrt_minus_one);
             test.fail();
             printf("    Allowed deserialize of [i]: %d", f==id);
-        } catch (CryptoException) {
+        } catch (const CryptoException&) {
             /* ok */
         }
     }
@@ -346,7 +346,7 @@ static void test_ec() {
             Point f(minus_sqrt_minus_one);
             test.fail();
             printf("    Allowed deserialize of [-i]: %d", f==id);
-        } catch (CryptoException) {
+        } catch (const CryptoException&) {
             /* ok */
         }
     }
@@ -365,7 +365,7 @@ static void test_ec() {
         
         try {
             point_check(test,p,q,r,0,0,p,Point(p.serialize()),"round-trip");
-        } catch (CryptoException) {
+        } catch (const CryptoException&) {
             test.fail();
             printf("    Round-trip raised CryptoException!\n");
         }
@@ -408,7 +408,7 @@ static void test_ec() {
         
         try {
             point_check(test,p,q,r,x,0,Point(x.direct_scalarmul(p.serialize())),x*p,"direct mul");
-        } catch (CryptoException) {
+        } catch (const CryptoException&) {
             printf("    Direct mul raised CryptoException!\n");
             test.fail();
         }

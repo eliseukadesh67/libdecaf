@@ -39,6 +39,20 @@
 >
 > The public API is `decaf/ed521.h`. The rest of this README is the upstream
 > libdecaf documentation.
+>
+> ### Building the base library (without E-521)
+>
+> The stock library (Curve25519 / Ed448) builds with the upstream root Makefile:
+>
+> ```bash
+> make lib          # produces build/lib/libdecaf.so
+> ```
+>
+> Note: a bare `make` (the `all` target) also compiles the upstream *legacy test
+> suite* (`test/test_decaf.cxx`, benches, …), written around 2017. On modern
+> compilers some of those upstream test/header files trip newer `-Werror`
+> diagnostics — this is unrelated to E-521 and affects stock libdecaf as well.
+> For the base library use `make lib`; for E-521 use `./run_e521_tests.sh`.
 
 ---
 
