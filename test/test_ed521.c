@@ -11,10 +11,15 @@
  *      are exercised over many random keys/messages (round-trip must succeed),
  *      and tampered signatures/messages must be rejected.
  *
- * Build (from the libdecaf/ root):
- *   gcc -O2 test_ed521.c -I build-e521-final/src/GENERATED/include \
- *       build-e521-final/src/libdecaf.a -o test_ed521
- *   ./test_ed521
+ * Usage:
+ *   test_ed521            compact summary (default)
+ *   test_ed521 --verbose  show [k]*G encodings and a full sign/verify example
+ *
+ * Build: run ./run_e521_tests.sh from the libdecaf/ root, which builds the
+ * library and compiles/runs this test. To build it by hand against an existing
+ * build directory <BUILD> (e.g. build-e521):
+ *   gcc -O2 test/test_ed521.c -Itest -I<BUILD>/src/GENERATED/include \
+ *       <BUILD>/src/libdecaf.a -o test_ed521 && ./test_ed521
  */
 #include <stdio.h>
 #include <string.h>
@@ -27,10 +32,20 @@ extern const decaf_521_point_t decaf_521_point_base;
 #define PUB  DECAF_EDDSA_521_PUBLIC_BYTES
 #define SIG  DECAF_EDDSA_521_SIGNATURE_BYTES
 
+static int verbose = 0;
+
 static void unhex(const char *h, uint8_t *o, size_t n){
     for(size_t i=0;i<n;i++){ unsigned v; sscanf(h+2*i,"%2x",&v); o[i]=(uint8_t)v; }
 }
 static void hex(const char*l,const uint8_t*p,size_t n){printf("%s",l);for(size_t i=0;i<n;i++)printf("%02x",p[i]);printf("\n");}
+
+/* Print a byte string in hex, abbreviating long values as head..tail. */
+static void hexline(const char *label, const uint8_t *p, size_t n){
+    printf("%s", label);
+    if (n <= 16) { for (size_t i=0;i<n;i++) printf("%02x", p[i]); }
+    else { for (size_t i=0;i<8;i++) printf("%02x", p[i]); printf(".."); for (size_t i=n-8;i<n;i++) printf("%02x", p[i]); }
+    printf("  (%zu bytes)\n", n);
+}
 
 /* Reference encodings of [k]*G, k=1..6, produced by e521_ref.py (canonical params). */
 static const char *REF_kG[6] = {
@@ -43,8 +58,9 @@ static const char *REF_kG[6] = {
 };
 
 static int test_curve(void){
-    printf("== (1) Aritmetica da curva vs referencia canonica (neuromancer E-521) ==\n");
-    decaf_521_scalar_t four,inv4; decaf_521_scalar_set_unsigned(four,4); decaf_521_scalar_invert(inv4,four);
+    printf("== (1) Curve arithmetic vs canonical reference (neuromancer E-521) ==\n");
+    decaf_521_scalar_t four,inv4; decaf_521_scalar_set_unsigned(four,4);
+    (void)decaf_521_scalar_invert(inv4,four);
     int fails=0;
     for(unsigned k=1;k<=6;k++){
         decaf_521_scalar_t s; decaf_521_scalar_set_unsigned(s,k); decaf_521_scalar_mul(s,s,inv4);
@@ -52,38 +68,67 @@ static int test_curve(void){
         uint8_t got[PUB]; decaf_521_point_mul_by_ratio_and_encode_like_eddsa(got,p);
         uint8_t exp[PUB]; unhex(REF_kG[k-1],exp,PUB);
         int ok = memcmp(got,exp,PUB)==0; fails+=!ok;
-        printf("  [%u]G  %s\n", k, ok?"OK":"FALHOU");
-        if(!ok){ hex("    esperado: ",exp,PUB); hex("    obtido  : ",got,PUB); }
+        printf("  [%u]G  %s\n", k, ok?"OK":"FAIL");
+        if(verbose){
+            hexline("      reference : ",exp,PUB);
+            hexline("      computed  : ",got,PUB);
+        } else if(!ok){
+            hex("    expected: ",exp,PUB); hex("    got     : ",got,PUB);
+        }
     }
-    printf("  -> %s\n\n", fails?"FALHAS":"todos os pontos conferem");
+    printf("  -> %s\n\n", fails?"FAILURES":"all points match");
     return fails;
 }
 
 static int test_protocol(void){
-    printf("== (2) EdDSA E-521: keygen + assinatura + verificacao ==\n");
-    int fails=0; const int N=64;
+    printf("== (2) EdDSA E-521: keygen + signing + verification ==\n");
+    const int N=64;
+    int rt_ok=0, sig_rej=0, msg_rej=0;
     for(int t=0;t<N;t++){
         uint8_t priv[PUB], pub[PUB], sig[SIG];
         for(unsigned i=0;i<PUB;i++) priv[i]=(uint8_t)(0x11*t + 7*i + 3);
         uint8_t msg[40]; for(unsigned i=0;i<sizeof(msg);i++) msg[i]=(uint8_t)(t+i);
         decaf_ed521_derive_public_key(pub,priv);
         decaf_ed521_sign(sig,priv,pub,msg,sizeof(msg),0,NULL,0);
-        if(decaf_ed521_verify(sig,pub,msg,sizeof(msg),0,NULL,0)!=DECAF_SUCCESS){ fails++; printf("  t=%d round-trip FALHOU\n",t); continue; }
+        int rt = (decaf_ed521_verify(sig,pub,msg,sizeof(msg),0,NULL,0)==DECAF_SUCCESS);
+        rt_ok += rt;
         /* negative: flip one signature bit -> must fail */
         uint8_t bad[SIG]; memcpy(bad,sig,SIG); bad[t%SIG]^=0x01;
-        if(decaf_ed521_verify(bad,pub,msg,sizeof(msg),0,NULL,0)==DECAF_SUCCESS){ fails++; printf("  t=%d aceitou assinatura adulterada\n",t); }
+        sig_rej += (decaf_ed521_verify(bad,pub,msg,sizeof(msg),0,NULL,0)!=DECAF_SUCCESS);
         /* negative: modify message -> must fail */
         uint8_t m2[40]; memcpy(m2,msg,sizeof(m2)); m2[0]^=0x80;
-        if(decaf_ed521_verify(sig,pub,m2,sizeof(m2),0,NULL,0)==DECAF_SUCCESS){ fails++; printf("  t=%d aceitou mensagem alterada\n",t); }
+        msg_rej += (decaf_ed521_verify(sig,pub,m2,sizeof(m2),0,NULL,0)!=DECAF_SUCCESS);
+
+        if(verbose && t==0){
+            printf("  example (t=0): keygen -> sign -> verify\n");
+            hexline("    private key : ", priv, PUB);
+            hexline("    message     : ", msg, sizeof(msg));
+            hexline("    public key  : ", pub, PUB);
+            hexline("    signature   : ", sig, SIG);
+            printf ("    verify      : %s\n", rt?"VALID":"INVALID");
+            printf ("    tamper 1 sig bit -> verify: %s\n",
+                    (decaf_ed521_verify(bad,pub,msg,sizeof(msg),0,NULL,0)==DECAF_SUCCESS)?"VALID (BUG!)":"INVALID (rejected)");
+            printf ("    tamper 1 msg bit -> verify: %s\n\n",
+                    (decaf_ed521_verify(sig,pub,m2,sizeof(m2),0,NULL,0)==DECAF_SUCCESS)?"VALID (BUG!)":"INVALID (rejected)");
+        }
     }
-    printf("  -> %d/%d round-trips OK; adulteracoes %s\n\n", N-0, N, fails?"NAO rejeitadas (FALHA)":"corretamente rejeitadas");
+    int fails = (rt_ok!=N) + (sig_rej!=N) + (msg_rej!=N);
+    printf("Robustness tests:\n");
+    printf("  %d sign/verify cycles (random keys and messages) ...... %s\n",
+           N, rt_ok==N?"OK":"FAIL");
+    printf("  signature flipped by 1 bit ............................ %s\n",
+           sig_rej==N?"REJECTED":"ACCEPTED (FAIL)");
+    printf("  message flipped by 1 bit .............................. %s\n\n",
+           msg_rej==N?"REJECTED":"ACCEPTED (FAIL)");
     return fails;
 }
 
-int main(void){
+int main(int argc, char **argv){
+    for(int a=1;a<argc;a++)
+        if(!strcmp(argv[a],"--verbose") || !strcmp(argv[a],"-v")) verbose = 1;
     int f = 0;
     f += test_curve();
     f += test_protocol();
-    printf("RESULTADO FINAL: %s\n", f==0 ? "TODOS OS TESTES PASSARAM" : "HOUVE FALHAS");
+    printf("FINAL RESULT: %s\n", f==0 ? "ALL TESTS PASSED" : "THERE WERE FAILURES");
     return f?1:0;
 }

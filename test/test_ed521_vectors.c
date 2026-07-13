@@ -9,6 +9,10 @@
  * For each vector this test checks: (1) the derived public key == expected;
  * (2) the generated signature == expected; (3) the reference signature verifies.
  *
+ * Usage:
+ *   test_ed521_vectors            compact table (default)
+ *   test_ed521_vectors --verbose  per-vector detail (keys, message, signature)
+ *
  * Build: run ./run_e521_tests.sh from the libdecaf/ root, which builds the
  * library and compiles/runs this test. To build it by hand against an existing
  * build directory <BUILD> (e.g. build-e521):
@@ -31,12 +35,38 @@ static uint8_t* unhex(const char*h, size_t *outlen){
     *outlen=n; return o;
 }
 
-int main(void){
+/* Print a byte string in hex, abbreviating long values as head..tail. */
+static void hexline(const char *label, const uint8_t *p, size_t n){
+    printf("%s", label);
+    if (n == 0) { printf("(empty)\n"); return; }
+    if (n <= 16) {
+        for (size_t i=0;i<n;i++) printf("%02x", p[i]);
+    } else {
+        for (size_t i=0;i<8;i++) printf("%02x", p[i]);
+        printf("..");
+        for (size_t i=n-8;i<n;i++) printf("%02x", p[i]);
+    }
+    printf("  (%zu bytes)\n", n);
+}
+
+int main(int argc, char **argv){
+    int verbose = 0;
+    for (int a=1;a<argc;a++)
+        if (!strcmp(argv[a],"--verbose") || !strcmp(argv[a],"-v")) verbose = 1;
+
     int fails=0;
-    printf("Validation against the %d reference Ed521 test vectors (UnB TCC)\n", N_VEC);
-    printf("+-----+----------+----------+-----------+----------+\n");
-    printf("| vec | msg (B)  | pub.key  | signature | verify   |\n");
-    printf("+-----+----------+----------+-----------+----------+\n");
+
+    if (!verbose) {
+        printf("Validation against the %d reference Ed521 test vectors (UnB TCC)\n", N_VEC);
+        printf("+-----+----------+----------+-----------+----------+\n");
+        printf("| vec | msg (B)  | pub.key  | signature | verify   |\n");
+        printf("+-----+----------+----------+-----------+----------+\n");
+    } else {
+        printf("Validation against the %d reference Ed521 test vectors (UnB TCC)\n", N_VEC);
+        printf("Per vector: derive public key, sign the message, and verify the\n");
+        printf("reference signature -- each compared byte-for-byte with the vector.\n");
+    }
+
     for(int k=0;k<N_VEC;k++){
         size_t pl,ul,ml,sl;
         uint8_t *priv=unhex(V_PRIV[k],&pl);
@@ -53,12 +83,28 @@ int main(void){
         int sig_ok = (memcmp(sig,esig,SIG)==0);
         int ver_ok = (v==DECAF_SUCCESS);
         fails += !(pub_ok && sig_ok && ver_ok);
-        printf("| %3d | %8d | %-8s | %-9s | %-8s |\n", k, (int)ml,
-               pub_ok?"OK":"FAIL", sig_ok?"OK":"FAIL", ver_ok?"VALID":"FAIL");
+
+        if (!verbose) {
+            printf("| %3d | %8d | %-8s | %-9s | %-8s |\n", k, (int)ml,
+                   pub_ok?"OK":"FAIL", sig_ok?"OK":"FAIL", ver_ok?"VALID":"FAIL");
+        } else {
+            printf("\n----- Vector %d  (message: %zu bytes) -----------------------------\n", k, ml);
+            hexline("  private key      : ", priv, pl);
+            hexline("  message          : ", msg, ml);
+            hexline("  public key  (exp): ", epub, ul);
+            hexline("  public key  (got): ", pub, PUB);
+            printf ("    -> public key match : %s\n", pub_ok?"YES":"NO");
+            hexline("  signature   (exp): ", esig, sl);
+            hexline("  signature   (got): ", sig, SIG);
+            printf ("    -> signature match  : %s\n", sig_ok?"YES":"NO");
+            printf ("  verify(ref sig)  : %s\n", ver_ok?"VALID":"INVALID");
+        }
         free(priv);free(epub);free(msg);free(esig);
     }
-    printf("+-----+----------+----------+-----------+----------+\n");
-    printf("\nRESULT: %s\n", fails==0 ?
-        "ALL REFERENCE VECTORS MATCH (full interop)" : "THERE WERE FAILURES");
+
+    if (!verbose) printf("+-----+----------+----------+-----------+----------+\n");
+    else          printf("\n");
+    printf("RESULT: %s\n", fails==0 ?
+        "8/8 vectors match (full interop)" : "THERE WERE FAILURES");
     return fails?1:0;
 }
