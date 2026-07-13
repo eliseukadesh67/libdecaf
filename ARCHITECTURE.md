@@ -128,9 +128,9 @@ make decaf-static           # relinka com as tabelas reais
 Duas linhas de evidência:
 
 1. **Interoperabilidade com a referência** — a `libdecaf` reproduz **byte a byte** os
-   **8 vetores de teste oficiais Ed521** do Apêndice C de Antunes (2021) — chave pública,
-   assinatura e verificação, para mensagens de 0 a 1023 bytes. Teste: `test_penido.c`
-   (+ `penido_vectors.h`, extraído do PDF).
+   **8 vetores de teste Ed521** de um TCC anterior de um aluno da UnB (a implementação de
+   referência na qual este trabalho se baseia) — chave pública, assinatura e verificação,
+   para mensagens de 0 a 1023 bytes. Teste: `test_ed521_vectors.c` (+ `ed521_vectors.h`).
 2. **Corretude canônica** — as codificações de `[k]·G` conferem byte a byte com uma
    referência independente escrita do zero (`e521_ref.py`, inteiros grandes do Python,
    parâmetros canônicos da neuromancer.sk); + round‑trip sobre chaves aleatórias e

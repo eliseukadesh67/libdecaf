@@ -275,9 +275,34 @@ void API_NS(scalar_decode_long)(
     size_t i;
     scalar_t t1, t2;
 
+#if 8*SCALAR_SER_BYTES != WBITS*SCALAR_LIMBS
+    /* When the serialized width (8*SCALAR_SER_BYTES) differs from the internal
+     * limb width (WBITS*SCALAR_LIMBS) -- as for E-521, where the 519-bit order
+     * needs 9 64-bit limbs (576 bits) but only 65 bytes (520 bits) are
+     * serialized -- the chunked reduction below would multiply each chunk by
+     * the Montgomery radix 2^(WBITS*SCALAR_LIMBS) instead of the byte radix
+     * 2^(8*SCALAR_SER_BYTES), giving a wrong result.  Reduce byte-by-byte with
+     * Horner's method instead (input is little-endian). */
+    (void)t1; (void)t2;
+    {
+        scalar_t acc, c256, b;
+        API_NS(scalar_copy)(acc, API_NS(scalar_zero));
+        API_NS(scalar_set_unsigned)(c256, 256);
+        for (i = ser_len; i > 0; ) {
+            i--;
+            API_NS(scalar_mul)(acc, acc, c256);
+            API_NS(scalar_set_unsigned)(b, (decaf_word_t)ser[i]);
+            API_NS(scalar_add)(acc, acc, b);
+        }
+        API_NS(scalar_copy)(s, acc);
+        API_NS(scalar_destroy)(acc);
+        API_NS(scalar_destroy)(b);
+    }
+    return;
+#else
     i = ser_len - (ser_len%SCALAR_SER_BYTES);
     if (i==ser_len) i -= SCALAR_SER_BYTES;
-    
+
     scalar_decode_short(t1, &ser[i], ser_len-i);
 
     if (ser_len == sizeof(scalar_t)) {
@@ -298,6 +323,7 @@ void API_NS(scalar_decode_long)(
     API_NS(scalar_copy)(s, t1);
     API_NS(scalar_destroy)(t1);
     API_NS(scalar_destroy)(t2);
+#endif
 }
 
 void API_NS(scalar_encode)(
@@ -305,8 +331,12 @@ void API_NS(scalar_encode)(
     const scalar_t s
 ) {
     unsigned int i,j,k=0;
-    for (i=0; i<SCALAR_LIMBS; i++) {
-        for (j=0; j<sizeof(decaf_word_t); j++,k++) {
+    /* NB: cap at SCALAR_SER_BYTES.  For most curves SCALAR_LIMBS*sizeof(word)
+     * equals SCALAR_SER_BYTES, but for E-521 the 519-bit order needs 9 64-bit
+     * limbs (72 bytes) while only 65 bytes are serialized, so the unguarded
+     * double loop would overrun the output buffer. */
+    for (i=0; i<SCALAR_LIMBS && k<SCALAR_SER_BYTES; i++) {
+        for (j=0; j<sizeof(decaf_word_t) && k<SCALAR_SER_BYTES; j++,k++) {
             ser[k] = s->limb[i] >> (8*j);
         }
     }

@@ -1,5 +1,47 @@
 # Decaf elliptic curve library
 
+> **TCC fork — EdDSA over the E-521 curve.** This fork adds an experimental
+> EdDSA implementation over the **E-521** twisted Edwards curve
+> (field `p = 2^521-1`, cofactor 4, `d = -376014`), with 66-byte keys,
+> 132-byte signatures and SHAKE256. See
+> [`docs/en/README.md`](docs/en/README.md) (English) /
+> [`docs/pt/README.md`](docs/pt/README.md) (Português) and
+> [`ARCHITECTURE.md`](ARCHITECTURE.md).
+>
+> ## Evaluating the E-521 implementation (one command)
+>
+> From this directory, with `cmake`, `make` and a C compiler installed:
+>
+> ```bash
+> ./run_e521_tests.sh
+> ```
+>
+> This builds the library with the E-521 target, generates the base-point
+> tables, then compiles and runs both validation suites:
+>
+> - **`test/test_ed521_vectors.c`** — reproduces byte-for-byte the 8 reference Ed521
+>   test vectors from a previous UnB undergraduate thesis (TCC) — the reference
+>   implementation this work builds on (public key, signature, verification;
+>   messages of 0–1023 bytes).
+> - **`test/test_ed521.c`** — checks `[k]·G` against an independent reference
+>   (`test/e521_ref.py`, canonical neuromancer.sk parameters), plus 64 random
+>   sign/verify round-trips and tamper rejection.
+>
+> To build the library manually instead of using the script:
+>
+> ```bash
+> mkdir build && cd build
+> cmake -DENABLE_EXPERIMENTAL_E521=ON -DCMAKE_BUILD_TYPE=Release ..
+> make decaf-static        # build and link the library
+> make decaf_tables_e521   # generate the base-point tables
+> make decaf-static        # relink with the real tables
+> ```
+>
+> The public API is `decaf/ed521.h`. The rest of this README is the upstream
+> libdecaf documentation.
+
+---
+
 The libdecaf library is for elliptic curve research and practical application.
 It currently supports Ed448-Goldilocks and Curve25519.
 

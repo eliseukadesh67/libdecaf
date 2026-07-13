@@ -55,12 +55,12 @@ build-*/
 __pycache__/
 *.pyc
 /test_ed521
-/test_penido
+/test_ed521_vectors
 /meu_teste
 /ed255_demo
 /gen_e521_base
 # Root-level scratch copies (canonical versions live in test/)
 /test_ed521.c
-/test_penido.c
-/penido_vectors.h
+/test_ed521_vectors.c
+/ed521_vectors.h
 /e521_ref.py

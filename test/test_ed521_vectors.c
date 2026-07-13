@@ -1,20 +1,26 @@
-/* Validacao da libdecaf EdDSA E-521 contra os vetores de teste oficiais do
- * Apendice C de Antunes (2021, UnB) -- a implementacao de referencia (Ed521/ECPy
- * em Dart) na qual este trabalho se baseia.
+/* Validation of the libdecaf EdDSA E-521 implementation against a set of
+ * official Ed521 test vectors.
  *
- * Para cada vetor confere: (1) chave publica derivada == esperada;
- * (2) assinatura gerada == esperada; (3) a assinatura de referencia verifica.
+ * The vectors (in ed521_vectors.h) are taken from a previous undergraduate
+ * thesis (TCC) by a student at the University of Brasilia (UnB): the reference
+ * Ed521 implementation on which this work is based. They were transcribed from
+ * that work's appendix of test vectors.
  *
- * Build (a partir de libdecaf/):
- *   gcc -O2 test_penido.c -I build-e521-final/src/GENERATED/include \
- *       build-e521-final/src/libdecaf.a -o test_penido && ./test_penido
+ * For each vector this test checks: (1) the derived public key == expected;
+ * (2) the generated signature == expected; (3) the reference signature verifies.
+ *
+ * Build: run ./run_e521_tests.sh from the libdecaf/ root, which builds the
+ * library and compiles/runs this test. To build it by hand against an existing
+ * build directory <BUILD> (e.g. build-e521):
+ *   gcc -O2 test/test_ed521_vectors.c -Itest -I<BUILD>/src/GENERATED/include \
+ *       <BUILD>/src/libdecaf.a -o test_ed521_vectors && ./test_ed521_vectors
  */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <decaf/ed521.h>
-#include "penido_vectors.h"
+#include "ed521_vectors.h"
 
 #define PUB DECAF_EDDSA_521_PUBLIC_BYTES
 #define SIG DECAF_EDDSA_521_SIGNATURE_BYTES
@@ -27,7 +33,7 @@ static uint8_t* unhex(const char*h, size_t *outlen){
 
 int main(void){
     int fails=0;
-    printf("Validacao contra os %d vetores do Apendice C (Antunes, 2021)\n", N_VEC);
+    printf("Validation against the %d reference Ed521 test vectors (UnB TCC)\n", N_VEC);
     printf("+-----+----------+----------+-----------+----------+\n");
     printf("| vec | msg (B)  | pub.key  | signature | verify   |\n");
     printf("+-----+----------+----------+-----------+----------+\n");
@@ -48,10 +54,11 @@ int main(void){
         int ver_ok = (v==DECAF_SUCCESS);
         fails += !(pub_ok && sig_ok && ver_ok);
         printf("| %3d | %8d | %-8s | %-9s | %-8s |\n", k, (int)ml,
-               pub_ok?"OK":"FALHOU", sig_ok?"OK":"FALHOU", ver_ok?"VALIDA":"FALHOU");
+               pub_ok?"OK":"FAIL", sig_ok?"OK":"FAIL", ver_ok?"VALID":"FAIL");
         free(priv);free(epub);free(msg);free(esig);
     }
     printf("+-----+----------+----------+-----------+----------+\n");
-    printf("\nRESULTADO: %s\n", fails==0 ? "TODOS OS 8 VETORES DO PENIDO CONFEREM (interop total)" : "HOUVE FALHAS");
+    printf("\nRESULT: %s\n", fails==0 ?
+        "ALL REFERENCE VECTORS MATCH (full interop)" : "THERE WERE FAILURES");
     return fails?1:0;
 }

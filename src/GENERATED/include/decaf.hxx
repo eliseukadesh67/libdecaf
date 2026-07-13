@@ -17,6 +17,7 @@
 
 #include <decaf/point_255.hxx>
 #include <decaf/point_448.hxx>
+#include <decaf/point_521.hxx>
 
 /** Namespace for all C++ decaf objects. */
 namespace decaf {
