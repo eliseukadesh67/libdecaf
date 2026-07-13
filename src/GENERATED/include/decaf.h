@@ -28,6 +28,5 @@
 
 #include <decaf/point_255.h>
 #include <decaf/point_448.h>
-#include <decaf/point_521.h>
 
 #endif /* __DECAF_H__ */

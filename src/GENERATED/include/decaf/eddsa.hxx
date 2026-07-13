@@ -26,6 +26,5 @@ namespace decaf {
 
 #include <decaf/ed255.hxx>
 #include <decaf/ed448.hxx>
-#include <decaf/ed521.hxx>
 
 #endif /* __DECAF_EDDSA_HXX__ */

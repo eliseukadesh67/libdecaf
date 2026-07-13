@@ -20,6 +20,5 @@
 
 #include <decaf/crypto_255.hxx>
 #include <decaf/crypto_448.hxx>
-#include <decaf/crypto_521.hxx>
 
 #endif /* __DECAF_CRYPTO_HXX__ */

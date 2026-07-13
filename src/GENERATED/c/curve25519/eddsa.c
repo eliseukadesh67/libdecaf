@@ -43,16 +43,6 @@ static void clamp (
 ) {
     /* Blarg */
     secret_scalar_ser[0] &= -COFACTOR;
-#if 255 % 8 == 1
-    /* p521 (E-521): the field has exactly one bit beyond a whole number of
-     * bytes (521 = 8*65 + 1), so the generic (1<<(bits%8))>>1 high-bit rule
-     * does not apply.  We follow the Ed448-style pruning used by the reference
-     * Ed521 implementation of Antunes (2021), which is the basis for the test
-     * vectors adopted in this work: clear the low cofactor bits, zero the top
-     * byte and set the most-significant bit of the penultimate byte (bit 519). */
-    secret_scalar_ser[DECAF_EDDSA_25519_PRIVATE_BYTES - 1] = 0;
-    secret_scalar_ser[DECAF_EDDSA_25519_PRIVATE_BYTES - 2] |= 0x80;
-#else
     uint8_t hibit = (1<<7)>>1;
     if (hibit == 0) {
         secret_scalar_ser[DECAF_EDDSA_25519_PRIVATE_BYTES - 1] = 0;
@@ -61,7 +51,6 @@ static void clamp (
         secret_scalar_ser[DECAF_EDDSA_25519_PRIVATE_BYTES - 1] &= hibit-1;
         secret_scalar_ser[DECAF_EDDSA_25519_PRIVATE_BYTES - 1] |= hibit;
     }
-#endif
 }
 
 static void hash_init_with_dom(
@@ -139,15 +128,8 @@ void decaf_ed25519_derive_public_key (
     }
     
     API_NS(point_t) p;
-#if 255 % 8 == 1
-    /* p521: the fixed-base comb precomputation is not yet correct for this
-     * field backend, so use the verified variable-base scalar multiplication
-     * with the stored base point.  Slower, but correct. */
-    API_NS(point_scalarmul)(p,API_NS(point_base),secret_scalar);
-#else
     API_NS(precomputed_scalarmul)(p,API_NS(precomputed_base),secret_scalar);
-#endif
-
+    
     API_NS(point_mul_by_ratio_and_encode_like_eddsa)(pubkey, p);
         
     /* Cleanup */
@@ -209,11 +191,7 @@ void decaf_ed25519_sign (
         }
         
         API_NS(point_t) p;
-#if 255 % 8 == 1
-        API_NS(point_scalarmul)(p,API_NS(point_base),nonce_scalar_2); /* p521: variable-base (see keygen note) */
-#else
         API_NS(precomputed_scalarmul)(p,API_NS(precomputed_base),nonce_scalar_2);
-#endif
         API_NS(point_mul_by_ratio_and_encode_like_eddsa)(nonce_point, p);
         API_NS(point_destroy)(p);
         API_NS(scalar_destroy)(nonce_scalar_2);
@@ -311,22 +289,12 @@ decaf_error_t decaf_ed25519_verify (
     
     
     /* pk_point = -c(x(P)) + (cx + k)G = kG */
-#if 255 % 8 == 1
-    /* p521: use the verified variable-base double scalar multiplication with the
-     * stored base point instead of the (not-yet-correct) wnaf base table. */
-    {
-        API_NS(point_t) combo;
-        API_NS(point_double_scalarmul)(combo, API_NS(point_base), response_scalar, pk_point, challenge_scalar);
-        API_NS(point_copy)(pk_point, combo);
-    }
-#else
     API_NS(base_double_scalarmul_non_secret)(
         pk_point,
         response_scalar,
         pk_point,
         challenge_scalar
     );
-#endif
     return decaf_succeed_if(API_NS(point_eq(pk_point,r_point)));
 }
 
